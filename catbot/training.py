@@ -1,3 +1,6 @@
+#REFERENCES
+#Labonne, M. (2022, March 7). Q‑learning for beginners: Train an AI to solve the Frozen Lake environment. Medium. https://medium.com/data-science/q-learning-for-beginners-2837b777741
+
 import random
 import time
 from typing import Dict
@@ -9,12 +12,6 @@ from cat_env import make_env
 # TODO: YOU MAY ADD ADDITIONAL IMPORTS OR FUNCTIONS HERE.                   #
 #############################################################################
 import matplotlib.pyplot as plt
-
-
-
-
-
-
 
 #############################################################################
 # END OF YOUR CODE. DO NOT MODIFY ANYTHING BEYOND THIS LINE.                #
@@ -55,7 +52,7 @@ def train_bot(cat_name, render: int = -1):
     # END OF YOUR CODE. DO NOT MODIFY ANYTHING BEYOND THIS LINE.                #
     #############################################################################
     
-    for ep in range(1, episodes + 1):
+    for ep in range(1, episodes + 1): 
         ##############################################################################
         # TODO: IMPLEMENT THE Q-LEARNING TRAINING LOOP HERE.                         #
         ##############################################################################
@@ -66,7 +63,8 @@ def train_bot(cat_name, render: int = -1):
         # 4. Since this environment doesn't give rewards, compute reward manually    #
         # 5. Update the Q-table accordingly based on agent's rewards.                #
         ############################################################################## 
-        
+    
+
         state, info = env.reset()
         done = False
 
@@ -121,3 +119,4 @@ def train_bot(cat_name, render: int = -1):
     plt.show()
 
     return q_table
+
