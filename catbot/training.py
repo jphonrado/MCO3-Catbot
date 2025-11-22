@@ -11,9 +11,22 @@ from cat_env import make_env
 #############################################################################
 # TODO: YOU MAY ADD ADDITIONAL IMPORTS OR FUNCTIONS HERE.                   #
 #############################################################################
-import matplotlib.pyplot as plt
 
-#############################################################################
+# Helper: decode observation integer into (agent_r, agent_c, cat_r, cat_c)
+#decode_obs converts the single integer observation returned by CatChaseEnv 
+# into the four coordinates (agent_row, agent_col, cat_row, cat_col). 
+# That allows the training code to compute distances, 
+# detect movement/wall bumps, and shape rewards. 
+def decode_obs(obs: int):
+    obs = int(obs)
+    agent_r = obs // 1000
+    rem = obs % 1000
+    agent_c = rem // 100
+    rem = rem % 100
+    cat_r = rem // 10
+    cat_c = rem % 10
+    return agent_r, agent_c, cat_r, cat_c
+#############################################################################G
 # END OF YOUR CODE. DO NOT MODIFY ANYTHING BEYOND THIS LINE.                #
 #############################################################################
 
@@ -35,8 +48,6 @@ def train_bot(cat_name, render: int = -1):
     # Hint: You may want to declare variables for the hyperparameters of the    #
     # training process such as learning rate, exploration rate, etc.            #
     #############################################################################
-    plt.rcParams['figure.dpi'] = 300
-    plt.rcParams.update({'font.size': 17})
 
     alpha = 0.5            # Learning rate
     gamma = 0.9            # Discount factor
@@ -46,8 +57,6 @@ def train_bot(cat_name, render: int = -1):
     # Track outcomes
     outcomes = []
 
-    print('Q-table before training:')
-    print(q_table)
     #############################################################################
     # END OF YOUR CODE. DO NOT MODIFY ANYTHING BEYOND THIS LINE.                #
     #############################################################################
@@ -66,6 +75,7 @@ def train_bot(cat_name, render: int = -1):
     
 
         state, info = env.reset()
+        state = int(state)
         done = False
 
         outcomes.append("Failure")
@@ -78,17 +88,44 @@ def train_bot(cat_name, render: int = -1):
             else:
                 action = np.argmax(q_table[state])
 
+            action = int(action)
 
             new_state, reward, terminated, truncated, info = env.step(action)
+            new_state = int(new_state)
             done = terminated or truncated
 
-            # Q-learning update
+            # Compute shaped reward based on Manhattan distance between agent and cat
+            #agent_row(ar), agent_col(ac), cat_row(cr), cat_col(cc)
+            ar, ac, cr, cc = decode_obs(state)
+            nar, nac, ncr, ncc = decode_obs(new_state) #new state variables
+
+            prev_dist = abs(ar - cr) + abs(ac - cc)
+            new_dist = abs(nar - ncr) + abs(nac - ncc)
+
+            # Default shaped reward: small step penalty, bonus for moving closer,
+            # penalty for moving away, penalty for bumping into walls, success reward.
+            reward = -0.01
+            if new_dist < prev_dist:
+                reward += 0.05
+            elif new_dist > prev_dist:
+                reward -= 0.02
+
+            # If agent didn't move (bumped into wall), penalize slightly
+            agent_moved = (nar != ar) or (nac != ac)
+            if not agent_moved:
+                reward -= 0.02
+
+            # Success reward on catch
+            if new_dist == 0 and done:
+                reward = 1.0
+
+            # Q-learning update using computed reward
             q_table[state][action] = q_table[state][action] + \
                 alpha * (reward + gamma * np.max(q_table[new_state]) - q_table[state][action])
 
             state = new_state
 
-            if reward != 0:
+            if done and new_dist == 0:
                 outcomes[-1] = "Success"
 
         # Decay epsilon
@@ -103,20 +140,6 @@ def train_bot(cat_name, render: int = -1):
             viz_env = make_env(cat_type=cat_name)
             play_q_table(viz_env, q_table, max_steps=100, move_delay=0.02, window_title=f"{cat_name}: Training Episode {ep}/{episodes}")
             print('episode', ep)
-
-    print()
-    print('===========================================')
-    print('Q-table after training:')
-    print(q_table)
-    
-    # Plot outcomes
-    plt.figure(figsize=(12, 5))
-    plt.xlabel("Run number")
-    plt.ylabel("Outcome")
-    ax = plt.gca()
-    ax.set_facecolor('#efeeea')
-    plt.bar(range(len(outcomes)), outcomes, color="#0A047A", width=1.0)
-    plt.show()
 
     return q_table
 
